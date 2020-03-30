@@ -8,13 +8,24 @@ class differentialEquation:
         self.maxIteration = N
         self.t0, self.y0 = initialCondition
         self.fonction = fonction
+        self.solution = solution if bool(solution) else None
 
     def __str__(self):
-        values = zip(solver.eulerExplicite(), solver.eulerModifie(), solver.pointMilieu(), solver.RK4())
+        values = zip(self.eulerExplicite(), self.eulerModifie(), self.pointMilieu(), self.RK4())
         print("t       eulerExplicite       eulerModifie        pointMilieu            RK4")
         return '\n'.join(
         f"{value1[0]:.1f}     {value1[1]:.8e}      {value2[1]:.8e}     {value3[1]:.8e}     {value4[1]:.8e}"
         for value1, value2, value3, value4 in values)
+
+    def compareWithSolution(self, method):
+        if not bool(self.solution):
+            return "Aucune solution analytique n'a été fournie."
+
+        methods = {'eulerExplicite': self.eulerExplicite(), 'eulerModifie': self.eulerModifie(),
+        'pointMilieu': self.pointMilieu(), 'RK4': self.RK4()}
+
+        print(f"t            {method:^14}      |y(t) - yapprox|")
+        return '\n'.join(f"{t:.1e}      {y:.8e}      {abs(y - self.solution(t)):.10e}" for t, y in methods[method])
 
     def eulerExplicite(self):
         tn, yn = self.t0, self.y0
@@ -29,9 +40,9 @@ class differentialEquation:
     def eulerModifie(self):
         tn, yn = self.t0, self.y0
         values = [(tn ,yn)]
-        yprime = lambda t, y: y + self.step*self.fonction(t, y)
         for n in range(self.maxIteration):
-            yn += 0.5*self.step*(self.fonction(tn, yn) + self.fonction(tn + 0.1, yprime(tn, yn)))
+            yprime = yn + self.step*self.fonction(tn, yn)
+            yn += 0.5*self.step*(self.fonction(tn, yn) + self.fonction(tn + 0.1, yprime))
             tn += self.step
             values.append((tn, yn))
 
@@ -63,9 +74,9 @@ class differentialEquation:
         return values
 
 fonction = lambda t, y: y + math.exp(2*t)
-solution = None
+solution = lambda t: math.exp(t) + math.exp(2*t)
 condition_initiale = (0, 2)
-h = 0.02
-N = 500
-solver = differentialEquation(h, N, condition_initiale, fonction)
-print(solver)
+h = 0.1
+N = 20
+solver = differentialEquation(h, N, condition_initiale, fonction, solution=solution)
+print(solver.compareWithSolution('RK4'))
