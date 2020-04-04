@@ -12,9 +12,9 @@ class differentialEquation:
 
     def __str__(self):
         values = zip(self.eulerExplicite(), self.eulerModifie(), self.pointMilieu(), self.RK4())
-        print("t       eulerExplicite         eulerModifie          pointMilieu             RK4")
+        print("t         eulerExplicite        eulerModifie          pointMilieu             RK4")
         return '\n'.join(
-        f"{value1[0]:.1f}     {value1[1]:.10e}     {value2[1]:.10e}     {value3[1]:.10e}     {value4[1]:.10e}"
+        f"{value1[0]:^4.1f}     {value1[1]:^12.10e}     {value2[1]:^12.10e}     {value3[1]:^12.10e}     {value4[1]:^12.10e}"
         for value1, value2, value3, value4 in values)
 
     def compareWithSolution(self, method):
