@@ -12,9 +12,9 @@ class differentialEquation:
 
     def __str__(self):
         values = zip(self.eulerExplicite(), self.eulerModifie(), self.pointMilieu(), self.RK4())
-        print("t       eulerExplicite       eulerModifie        pointMilieu            RK4")
+        print("t       eulerExplicite         eulerModifie          pointMilieu             RK4")
         return '\n'.join(
-        f"{value1[0]:.1f}     {value1[1]:.8e}      {value2[1]:.8e}     {value3[1]:.8e}     {value4[1]:.8e}"
+        f"{value1[0]:.1f}     {value1[1]:.10e}     {value2[1]:.10e}     {value3[1]:.10e}     {value4[1]:.10e}"
         for value1, value2, value3, value4 in values)
 
     def compareWithSolution(self, method):
@@ -25,7 +25,7 @@ class differentialEquation:
         'pointMilieu': self.pointMilieu(), 'RK4': self.RK4()}
 
         print(f"t            {method:^14}      |y(t) - yapprox|")
-        return '\n'.join(f"{t:.1e}      {y:.8e}      {abs(y - self.solution(t)):.10e}" for t, y in methods[method])
+        return '\n'.join(f"{t:.1f}      {y:.8e}      {abs(y - self.solution(t)):.10e}" for t, y in methods[method])
 
     def eulerExplicite(self):
         tn, yn = self.t0, self.y0
@@ -42,7 +42,7 @@ class differentialEquation:
         values = [(tn ,yn)]
         for n in range(self.maxIteration):
             yprime = yn + self.step*self.fonction(tn, yn)
-            yn += 0.5*self.step*(self.fonction(tn, yn) + self.fonction(tn + 0.1, yprime))
+            yn += 0.5*self.step*(self.fonction(tn, yn) + self.fonction(tn + self.step, yprime))
             tn += self.step
             values.append((tn, yn))
 
@@ -73,10 +73,9 @@ class differentialEquation:
 
         return values
 
-fonction = lambda t, y: y + math.exp(2*t)
-solution = lambda t: math.exp(t) + math.exp(2*t)
+fonction = lambda t, y: y*math.exp(t)
 condition_initiale = (0, 2)
 h = 0.1
-N = 20
-solver = differentialEquation(h, N, condition_initiale, fonction, solution=solution)
-print(solver.compareWithSolution('RK4'))
+N = 10
+solver = differentialEquation(h, N, condition_initiale, fonction)
+print(solver)
