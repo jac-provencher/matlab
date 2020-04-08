@@ -1,121 +1,90 @@
 import math
 import numpy as np
 
-class EDO1:
-
-    def __init__(self, h, N, initialCondition, fonction):
-
-        self.step = h
-        self.maxIteration = N
-        self.t0, self.y0 = initialCondition
-        self.fonction = fonction
-
-    def __str__(self):
-        values = zip(self.eulerExplicite(), self.eulerModifie(), self.pointMilieu(), self.RK4())
-        print("t         eulerExplicite        eulerModifie          pointMilieu             RK4")
-        return '\n'.join(
-        f"{value1[0]:^4.2f}     {value1[1]:^12.10e}     {value2[1]:^12.10e}     {value3[1]:^12.10e}     {value4[1]:^12.10e}"
-        for value1, value2, value3, value4 in values)
-
-    def eulerExplicite(self):
-        tn, yn = self.t0, self.y0
-        values = [(tn, yn)]
-        for n in range(self.maxIteration):
-            yn += self.step*self.fonction(tn, yn)
-            tn += self.step
-            values.append((tn, yn))
-
-        return values
-
-    def eulerModifie(self):
-        tn, yn = self.t0, self.y0
-        values = [(tn, yn)]
-        for n in range(self.maxIteration):
-            yprime = yn + self.step*self.fonction(tn, yn)
-            yn += 0.5*self.step*(self.fonction(tn, yn) + self.fonction(tn + self.step, yprime))
-            tn += self.step
-            values.append((tn, yn))
-
-        return values
-
-    def pointMilieu(self):
-        tn, yn = self.t0, self.y0
-        values = [(tn, yn)]
-        for n in range(self.maxIteration):
-            k = self.step*self.fonction(tn, yn)
-            yn += self.step*self.fonction(tn + 0.5*self.step, yn + 0.5*k)
-            tn += self.step
-            values.append((tn, yn))
-
-        return values
-
-    def RK4(self):
-        tn, yn = self.t0, self.y0
-        values = [(tn, yn)]
-        for n in range(self.maxIteration):
-            k1 = self.step*self.fonction(tn, yn)
-            k2 = self.step*self.fonction(tn + 0.5*self.step, yn + 0.5*k1)
-            k3 = self.step*self.fonction(tn + 0.5*self.step, yn + 0.5*k2)
-            k4 = self.step*self.fonction(tn + self.step, yn + k3)
-            yn += (k1 + 2*k2 + 2*k3 + k4)/6
-            tn += self.step
-            values.append((tn, yn))
-
-        return values
-
-class EDO_System:
+class differential_equation_solver:
 
     def __init__(self, h, N, initialCondition, fonctions):
 
-        self.step = h
+        self.h = h
         self.maxIteration = N
         self.t0, *self.y0 = initialCondition
         self.fonctions = fonctions
 
+    def displayValues(self, data):
+
+        for iteration, values in data.items():
+            for t, y in values.items():
+                print(f"{iteration:<4} |  {t:>6.2f}  |  {y}")
+
     def eulerExplicite(self):
 
-        data = {}
-        tn, yn = self.t0, self.y0
-        data[0] = {tn : yn}
-
-        for n in range(1, self.maxIteration + 1):
+        tn, yn = self.t0, np.array(self.y0)
+        data = {0: {tn : yn}}
+        for n in range(1, self.maxIteration+1):
             data[n] = {}
-            yn = yn[:] + self.step * np.array([f(tn, yn[:]) for f in self.fonctions])
+            yn = yn + self.h * np.array([f(tn, yn) for f in self.fonctions])
+            tn += self.h
 
-            tn += self.step
+            data[n][tn] = yn
+
+        return data
+
+    def eulerModifie(self):
+
+        tn, yn = self.t0, np.array(self.y0)
+        data = {0: {tn : yn}}
+        for n in range(1, self.maxIteration+1):
+            data[n] = {}
+
+            yprime = yn + self.h*np.array([f(tn, yn) for f in self.fonctions])
+            yn = yn + 0.5*self.h*(np.array([f(tn, yn) for f in self.fonctions]) + np.array([f(tn + self.h, yprime) for f in self.fonctions]))
+            tn += self.h
+
+            data[n][tn] = yn
+
+        return data
+
+    def pointMilieu(self):
+
+        tn, yn = self.t0, np.array(self.y0)
+        data = {0: {tn : yn}}
+        for n in range(1, self.maxIteration+1):
+            data[n] = {}
+
+            k = self.h*np.array([f(tn, yn) for f in self.fonctions])
+            yn = yn + self.h*np.array([f(tn + 0.5*self.h, yn + 0.5*k) for f in self.fonctions])
+            tn += self.h
+
             data[n][tn] = yn
 
         return data
 
     def RK4(self):
 
-        data = {}
-        tn, yn = self.t0, self.y0
-        data[0] = {tn : yn}
-
-        for n in range(1, self.maxIteration + 1):
+        tn, yn = self.t0, np.array(self.y0)
+        data = {0: {tn : yn}}
+        for n in range(1, self.maxIteration+1):
             data[n] = {}
 
-            k1 = np.array([self.step * f(tn, yn[:]) for f in self.fonctions])
-            k2 = np.array([self.step * f(tn + 0.5*self.step, list(map(lambda c: c[1] + 0.5*c[0], zip(k1, yn[:])))) for f in self.fonctions])
-            k3 = np.array([self.step * f(tn + 0.5*self.step, list(map(lambda c: c[1] + 0.5*c[0], zip(k2, yn[:])))) for f in self.fonctions])
-            k4 = np.array([self.step * f(tn + 0.5*self.step, list(map(lambda c: c[1] + c[0], zip(k3, yn[:])))) for f in self.fonctions])
+            k1 = np.array([self.h * f(tn, yn) for f in self.fonctions])
+            k2 = np.array([self.h * f(tn + 0.5*self.h, yn + 0.5*k1) for f in self.fonctions])
+            k3 = np.array([self.h * f(tn + 0.5*self.h, yn + 0.5*k2) for f in self.fonctions])
+            k4 = np.array([self.h * f(tn + self.h, yn + k3) for f in self.fonctions])
 
-            yn = yn[:] + (k1 + 2*k2 + 2*k3 + k4)/6
+            yn = yn + (k1 + 2*k2 + 2*k3 + k4)/6
+            tn += self.h
 
-            tn += self.step
             data[n][tn] = yn
 
         return data
 
+
+# Note: y_{n} = y[n-1] (exemple: y_1 == y[0] >>> True)
 f1 = lambda t, y: y[1]
 f2 = lambda t, y: 2*y[1] - y[0]
 condition_initiale = (0, 2, 1)
 h = 0.1
-N = 1
+N = 10
 fonctions = [f1, f2]
-solver = EDO_System(h, N, condition_initiale, fonctions)
-
-for iteration, values in solver.RK4().items():
-    for t, y in values.items():
-        print(f"t{iteration} = {t:.2f}, y{iteration} = {y}")
+solver = differential_equation_solver(h, N, condition_initiale, fonctions)
+solver.displayValues(solver.RK4())
