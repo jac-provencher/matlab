@@ -2,7 +2,9 @@ import math
 import numpy as np
 import sympy as sp
 
-
+VARIABLES = x, y, z = sp.symbols('x y z')
+NMAX = 20
+TOL = 10**-8
 
 class differential_equation_solver:
 
@@ -18,19 +20,6 @@ class differential_equation_solver:
         for iteration, values in data.items():
             for t, y in values.items():
                 print(f"{iteration:<4} |  {t:>6.2f}  |  {y}")
-
-    def eulerExplicite(self):
-
-        tn, yn = self.t0, np.array(self.y0)
-        data = {0: {tn : yn}}
-        for n in range(1, self.maxIteration+1):
-            data[n] = {}
-            yn = yn + self.h*self.fonctions(tn, yn)
-            tn += self.h
-
-            data[n][tn] = yn
-
-        return data
 
     def Taylor(self):
         pass
@@ -84,36 +73,69 @@ class differential_equation_solver:
 
         return data
 
+    def eulerExplicite(self):
 
-# Note: y_{n} = y[n-1] (exemple: y_1 == y[0] >>> True)
-# f1 = lambda t, y: y[1]
-# f2 = lambda t, y: 2*y[1] - y[0]
-# f3 = lambda t, y: y[2] + y[0]/y[1] - 2
-# condition_initiale = (0, 2, 1, 3)
-# h = 0.1
-# N = 10
-# fonctions = lambda t, y: np.array([f1(t, y), f2(t, y), f3(t, y)])
-# solver = differential_equation_solver(h, N, condition_initiale, fonctions)
-# solver.displayValues(solver.RK4())
+        tn, yn = self.t0, np.array(self.y0)
+        data = {0: {tn : yn}}
+        for n in range(1, self.maxIteration+1):
+            data[n] = {}
+            yn = yn + self.h*self.fonctions(tn, yn)
+            tn += self.h
 
-variables = x, y, z = sp.symbols('x y z')
-f1 = 3*x - sp.cos(y*z) - 1/2
-f2 = x**2 - 81*(y + 0.1)**2 + sp.sin(z) + 1.06
-f3 = sp.exp(-x*y) + 20*z + (10*math.pi - 3)/3
-functions = f1, f2, f3
-initialApproximation = (0.1, 0.1, -0.1)
+            data[n][tn] = yn
 
-def Newton(x, functions):
+        return data
 
-    J = sp.lambdify([variables], sp.Matrix([[f.diff(variable) for variable in variables] for f in functions]))
-    R = sp.lambdify([variables], sp.Matrix([[f] for f in functions]))
+f1 = lambda t, y: y[1]
+f2 = lambda t, y: -30*(y[0] + y[1])
+fonctions = lambda t, y: np.array([f1(t, y), f2(t, y)])
+condition_initiale = (0, 0, 30)
+h = 0.01
+solver = differential_equation_solver(h, NMAX, condition_initiale, fonctions)
+# data = solver.eulerExplicite()
+# solver.displayValues(data)
 
-    for n in range(10):
-        dx = np.linalg.solve(J(x), -R(x))
-        print(J(x))
-        print(f"-{R(x)}")
+def newtonZero(nMax, x0, fct):
+
+    TOL = 10**-10
+    err_machine = 10**-15
+    f = sp.lambdify(x, fct)
+    fprime = sp.lambdify(x, fct.diff(x))
+    x1 = x0 - f(x0)/fprime(x0)
+    i = 0
+
+    while abs(x1 - x0)/(x1 + err_machine) >= TOL and i <= nMax:
+
+        x0 = x1
+        x1 = x0 - f(x0)/fprime(x0)
+        i += 1
+
+    return x1
+
+x0 = 0
+fct = sp.exp(-x) - x
+# print(newtonZero(NMAX, x0, fct))
+
+def newtonSystem(x, functions, TOL, nMax):
+
+    J = sp.lambdify([VARIABLES], sp.Matrix([[f.diff(variable) for variable in VARIABLES] for f in functions]))
+    R = sp.lambdify([VARIABLES], sp.Matrix([[f] for f in functions]))
+    dx = np.zeros((3, 1))
+    n = 0
+
+    while np.linalg.norm(residu := R(x)) >= TOL and n < nMax:
+        jacobien = J(x)
+        dx = np.linalg.solve(jacobien, -residu)
         x = np.array(x).reshape((len(x), 1)) + dx
-        print(x)
-        x = tuple(value for values in x for value in values)
+        print(f"ITERATION {n+1}\nJacobien:\n{jacobien}\ndx:\n{dx}\nRésidu:\n{residu}\nx:\n{x}\n")
+        x = x.reshape(len(x))
 
-Newton(initialApproximation, functions)
+        n += 1
+
+f2 = 2*x**2 - x*y + 3*y - 11
+f1 = x**2 + 2*y**2 - 22
+f3 = x**z + y**(2*x) - 43**z
+functions = [f1, f2, f3]
+x = (1, 2, 6)
+newtonSystem(x, functions, TOL, NMAX)
+
